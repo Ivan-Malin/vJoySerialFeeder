@@ -74,7 +74,7 @@ in a format compatible with Arduino IDE Serial Plotter
 // #define DIGITAL_BITMAPPED_INPUTS_COUNT sizeof(digitalBitmappedPins)
 // #define NUM_CHANNELS ((ANALOG_INPUTS_COUNT) + (DIGITAL_INPUTS_COUNT) + (15 + (DIGITAL_BITMAPPED_INPUTS_COUNT)) / 16)
 
-#define NUM_CHANNELS 6
+#define NUM_CHANNELS 4
 
 byte interruptPin = 3;
 byte channelAmount = NUM_CHANNELS;
@@ -95,7 +95,6 @@ void setup() {
 }
 
 void loop() {
-  Serial.println();
   int i, bm_ch = 0;
   unsigned long time = millis();
 
