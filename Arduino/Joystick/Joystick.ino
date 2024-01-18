@@ -1,11 +1,18 @@
 #include "ibus.h"
+/*
+This example outputs values from all PPM channels to Serial
+in a format compatible with Arduino IDE Serial Plotter
+*/
+
+#include <PPMReader.h>
+
 
 
 // //////////////////
 // Edit here to customize
 
 // How often to send data?
-#define UPDATE_INTERVAL 10 // milliseconds
+#define UPDATE_INTERVAL 10  // milliseconds
 
 // 1. Analog channels. Data can be read with the Arduino's 10-bit ADC.
 // This gives values from 0 to 1023.
@@ -16,7 +23,7 @@
 // byte analogPins[] = {A0, A1, A2, A3};
 // This will send four analog channels for A0, A1, A2, A3 respectively
 
-byte analogPins[] = {};
+// byte analogPins[] = {};
 
 
 // 2. Digital channels. Data can be read from Arduino's digital pins.
@@ -29,7 +36,7 @@ byte analogPins[] = {};
 // byte digitalPins[] = {2, 3};
 // This will send two channels for pins D2 and D3 respectively
 
-byte digitalPins[] = {};
+// byte digitalPins[] = {};
 
 
 // 3. Digital bit-mapped channels. Sending a single binary state as a 16-bit
@@ -46,7 +53,7 @@ byte digitalPins[] = {};
 // byte digitalBitmappedPins[] = {4, 5, 6, 7, 8, 9};
 // This will pack D4, D5, D6, D7, D8, D9 into one channel
 
-byte digitalBitmappedPins[] = {};
+// byte digitalBitmappedPins[] = {};
 
 
 // Define the appropriate analog reference source. See
@@ -62,60 +69,69 @@ byte digitalBitmappedPins[] = {};
 
 
 
-#define ANALOG_INPUTS_COUNT sizeof(analogPins)
-#define DIGITAL_INPUTS_COUNT sizeof(digitalPins)
-#define DIGITAL_BITMAPPED_INPUTS_COUNT sizeof(digitalBitmappedPins)
-#define NUM_CHANNELS ( (ANALOG_INPUTS_COUNT) + (DIGITAL_INPUTS_COUNT) + (15 + (DIGITAL_BITMAPPED_INPUTS_COUNT))/16 )
+// #define ANALOG_INPUTS_COUNT sizeof(analogPins)
+// #define DIGITAL_INPUTS_COUNT sizeof(digitalPins)
+// #define DIGITAL_BITMAPPED_INPUTS_COUNT sizeof(digitalBitmappedPins)
+// #define NUM_CHANNELS ((ANALOG_INPUTS_COUNT) + (DIGITAL_INPUTS_COUNT) + (15 + (DIGITAL_BITMAPPED_INPUTS_COUNT)) / 16)
 
+#define NUM_CHANNELS 6
 
+byte interruptPin = 3;
+byte channelAmount = NUM_CHANNELS;
+PPMReader ppm(interruptPin, channelAmount);
 IBus ibus(NUM_CHANNELS);
 
-void setup()
-{
-   for(int i=0; i < DIGITAL_INPUTS_COUNT; i++) {
-      pinMode(digitalPins[i], INPUT_PULLUP);
-   }
+void setup() {
+  // for (int i = 0; i < DIGITAL_INPUTS_COUNT; i++) {
+  //   pinMode(digitalPins[i], INPUT_PULLUP);
+  // }
 
-   for(int i=0; i < DIGITAL_BITMAPPED_INPUTS_COUNT; i++) {
-      pinMode(digitalBitmappedPins[i], INPUT_PULLUP);
-   }
+  // for (int i = 0; i < DIGITAL_BITMAPPED_INPUTS_COUNT; i++) {
+  //   pinMode(digitalBitmappedPins[i], INPUT_PULLUP);
+  // }
 
-   analogReference(ANALOG_REFERENCE); // use the defined ADC reference voltage source
-   Serial.begin(BAUD_RATE);           // setup serial
+  // analogReference(ANALOG_REFERENCE);  // use the defined ADC reference voltage source
+  Serial.begin(BAUD_RATE);            // setup serial
 }
 
-void loop()
-{
-   int i, bm_ch = 0;
-   unsigned long time = millis();
+void loop() {
+  Serial.println();
+  int i, bm_ch = 0;
+  unsigned long time = millis();
 
-   ibus.begin();
+  ibus.begin();
 
-   // read analog pins - one per channel
-   for(i=0; i < ANALOG_INPUTS_COUNT; i++)
-      ibus.write(1000 + (uint32_t)analogRead(analogPins[i])*1000/1023); // map 0-1023 to 1000-2000
+  // // read analog pins - one per channel
+  // for (i = 0; i < ANALOG_INPUTS_COUNT; i++)
+  //   ibus.write(1000 + (uint32_t)analogRead(analogPins[i]) * 1000 / 1023);  // map 0-1023 to 1000-2000
 
-   // read digital pins - one per channel
-   for(i=0; i < DIGITAL_INPUTS_COUNT; i++)
-      ibus.write(digitalRead(digitalPins[i]) == LOW ? 2000 : 1000);
+  // // read digital pins - one per channel
+  // for (i = 0; i < DIGITAL_INPUTS_COUNT; i++)
+  //   ibus.write(digitalRead(digitalPins[i]) == LOW ? 2000 : 1000);
 
-   // read digital bit-mapped pins - 16 pins go in one channel
-   for(i=0; i < DIGITAL_BITMAPPED_INPUTS_COUNT; i++) {
-      int bit = i%16;
-      if(digitalRead(digitalBitmappedPins[i]) == LOW)
-         bm_ch |= 1 << bit;
+  // // read digital bit-mapped pins - 16 pins go in one channel
+  // for (i = 0; i < DIGITAL_BITMAPPED_INPUTS_COUNT; i++) {
+  //   int bit = i % 16;
+  //   if (digitalRead(digitalBitmappedPins[i]) == LOW)
+  //     bm_ch |= 1 << bit;
 
-      if(bit == 15 || i == DIGITAL_BITMAPPED_INPUTS_COUNT-1) {
-         // data for one channel ready
-         ibus.write(bm_ch);
-         bm_ch = 0;
-      }
-   }
+  //   if (bit == 15 || i == DIGITAL_BITMAPPED_INPUTS_COUNT - 1) {
+  //     // data for one channel ready
+  //     ibus.write(bm_ch);
+  //     bm_ch = 0;
+  //   }
+  // }
 
-   ibus.end();
+  for (byte channel = 1; channel <= channelAmount; ++channel) {
+    unsigned short value = ppm.latestValidChannelValue(channel, 0);
+    ibus.write(value);
+    // Serial.println(value);
+  }
 
-   time = millis() - time; // time elapsed in reading the inputs
-   if(time < UPDATE_INTERVAL)
-      // sleep till it is time for the next update
-      delay(UPDATE_INTERVAL  - time);
+  ibus.end();
+
+  time = millis() - time;  // time elapsed in reading the inputs
+  if (time < UPDATE_INTERVAL)
+    // sleep till it is time for the next update
+    delay(UPDATE_INTERVAL - time);
 }
